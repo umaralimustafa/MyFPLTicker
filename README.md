@@ -1,0 +1,1 @@
+Tool to provide Fantasy Premier League players the ability to create custom FPL difficulty rating tickers based on stats provided by the official FPL API.
