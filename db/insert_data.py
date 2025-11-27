@@ -30,7 +30,7 @@ def insert_teams_to_postgres(teams, cur):
                 %(strength_overall_away)s, %(strength_attack_home)s, %(strength_attack_away)s,
                 %(strength_defence_home)s, %(strength_defence_away)s, %(pulse_id)s
             )
-            ON CONFLICT (code) DO NOTHING;
+            ON CONFLICT (id) DO NOTHING;
         """, team)
 
 def insert_elements_to_postgres(elements, cur):
