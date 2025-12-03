@@ -134,3 +134,35 @@ CREATE TABLE elements (
     clean_sheets_per_90 REAL,
     defensive_contribution_per_90 REAL
 );
+
+-- fixtures
+CREATE TABLE fixtures (
+    id INTEGER PRIMARY KEY,
+    code INTEGER,
+    event INTEGER,
+    finished BOOLEAN,
+    finished_provisional BOOLEAN,
+    kickoff_time TIMESTAMPTZ,
+    minutes INTEGER,
+    provisional_start_time BOOLEAN,
+    started BOOLEAN,
+    team_a INTEGER,
+    team_a_score INTEGER,
+    team_h INTEGER,
+    team_h_score INTEGER,
+    team_h_difficulty INTEGER,
+    team_a_difficulty INTEGER,
+    pulse_id INTEGER
+);
+
+-- fixture_stats
+-- Stores individual player performance stats for each fixture
+-- Each row represents one player's stat in a fixture (e.g., player X scored 2 goals in fixture Y)
+CREATE TABLE fixture_stats (
+    id SERIAL PRIMARY KEY,
+    fixture_id INTEGER NOT NULL REFERENCES fixtures(id) ON DELETE CASCADE,
+    stat_identifier TEXT NOT NULL, -- e.g., 'goals_scored', 'assists', 'yellow_cards', etc.
+    element INTEGER NOT NULL, -- player ID (references elements table)
+    value INTEGER NOT NULL, -- stat value (e.g., number of goals, assists, etc.)
+    is_home BOOLEAN NOT NULL -- true if player was on home team, false if away team
+);
