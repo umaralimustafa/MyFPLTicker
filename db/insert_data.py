@@ -4,6 +4,7 @@ import os
 from dotenv import load_dotenv
 
 FPL_API_URL = "https://fantasy.premierleague.com/api/bootstrap-static/"
+FPL_FIXTURES_URL = "https://fantasy.premierleague.com/api/fixtures/"
 
 # Load environment variables from .env file
 load_dotenv(dotenv_path=os.path.join(os.path.dirname(__file__), '..', '.env'))
@@ -90,16 +91,66 @@ def insert_elements_to_postgres(elements, cur):
             ON CONFLICT (id) DO NOTHING;
         """, el)
 
+def insert_fixtures_to_postgres(fixtures, cur):
+    for fixture in fixtures:
+        cur.execute("""
+            INSERT INTO fixtures (
+                id, code, event, finished, finished_provisional, kickoff_time, minutes,
+                provisional_start_time, started, team_a, team_a_score, team_h, team_h_score,
+                team_h_difficulty, team_a_difficulty, pulse_id
+            ) VALUES (
+                %(id)s, %(code)s, %(event)s, %(finished)s, %(finished_provisional)s, %(kickoff_time)s, %(minutes)s,
+                %(provisional_start_time)s, %(started)s, %(team_a)s, %(team_a_score)s, %(team_h)s, %(team_h_score)s,
+                %(team_h_difficulty)s, %(team_a_difficulty)s, %(pulse_id)s
+            )
+            ON CONFLICT (id) DO NOTHING;
+        """, fixture)
+        
+        # Insert fixture stats
+        stats = fixture.get("stats", [])
+        for stat in stats:
+            stat_identifier = stat.get("identifier")
+            
+            # Process away team stats
+            for player_stat in stat.get("a", []):
+                cur.execute("""
+                    INSERT INTO fixture_stats (
+                        fixture_id, stat_identifier, element, value, is_home
+                    ) VALUES (
+                        %s, %s, %s, %s, %s
+                    )
+                """, (fixture["id"], stat_identifier, player_stat["element"], player_stat["value"], False))
+            
+            # Process home team stats
+            for player_stat in stat.get("h", []):
+                cur.execute("""
+                    INSERT INTO fixture_stats (
+                        fixture_id, stat_identifier, element, value, is_home
+                    ) VALUES (
+                        %s, %s, %s, %s, %s
+                    )
+                """, (fixture["id"], stat_identifier, player_stat["element"], player_stat["value"], True))
+
 def fetch_and_insert_data():
+    # Fetch bootstrap-static data (teams and elements)
     response = requests.get(FPL_API_URL)
     response.raise_for_status()
     data = response.json()
     teams = data.get("teams", [])
     elements = data.get("elements", [])
+    
+    # Fetch fixtures data
+    fixtures_response = requests.get(FPL_FIXTURES_URL)
+    fixtures_response.raise_for_status()
+    fixtures = fixtures_response.json()
+    
     conn = psycopg2.connect(**DB_PARAMS)
     cur = conn.cursor()
+    
     insert_teams_to_postgres(teams, cur)
     insert_elements_to_postgres(elements, cur)
+    insert_fixtures_to_postgres(fixtures, cur)
+    
     conn.commit()
     cur.close()
     conn.close()
